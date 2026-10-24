@@ -1,0 +1,25 @@
+# ─────────────────────────────────────────────
+# Ingress Traefik pour exposer le frontend
+# ─────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: task-manager-ingress
+  namespace: tp-app
+  labels:
+    app.kubernetes.io/part-of: task-manager
+  annotations:
+    # Traefik (inclus par défaut dans k3s)
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+    - host: app.k3s.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-svc
+                port:
+                  number: 80

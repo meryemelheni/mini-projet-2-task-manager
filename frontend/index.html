@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>✦ Task Manager</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+
+    /* ═══ Animated gradient background ═══ */
+    .bg-mesh {
+      background: linear-gradient(135deg, #0a0a1a 0%, #0d1033 25%, #13072e 50%, #0b1a3a 75%, #0a0a1a 100%);
+      background-size: 400% 400%;
+      animation: meshShift 15s ease infinite;
+    }
+    @keyframes meshShift {
+      0%, 100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+
+    /* ═══ Floating orbs ═══ */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 600px; height: 600px; background: #6d28d9; top: -15%; left: -10%; animation: orbFloat1 20s ease-in-out infinite; }
+    .orb-2 { width: 500px; height: 500px; background: #2563eb; bottom: -10%; right: -10%; animation: orbFloat2 25s ease-in-out infinite; }
+    .orb-3 { width: 350px; height: 350px; background: #06b6d4; top: 40%; left: 50%; animation: orbFloat3 18s ease-in-out infinite; }
+
+    @keyframes orbFloat1 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%      { transform: translate(80px, 50px) scale(1.1); }
+      66%      { transform: translate(-30px, 80px) scale(0.95); }
+    }
+    @keyframes orbFloat2 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%      { transform: translate(-60px, -40px) scale(1.05); }
+      66%      { transform: translate(40px, -60px) scale(0.9); }
+    }
+    @keyframes orbFloat3 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50%      { transform: translate(-100px, -40px) scale(1.15); }
+    }
+
+    /* ═══ Glass card ═══ */
+    .glass {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glass-input:focus {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(139, 92, 246, 0.5);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15), 0 0 20px rgba(139, 92, 246, 0.1);
+    }
+
+    /* ═══ Animations ═══ */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); }
+      50%      { box-shadow: 0 0 30px rgba(139, 92, 246, 0.5); }
+    }
+    @keyframes shimmer {
+      0%   { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes countUp {
+      from { opacity: 0; transform: scale(0.5); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .animate-fade-in-up { animation: fadeInUp 0.5s ease-out both; }
+    .animate-slide-in   { animation: slideIn 0.35s ease-out both; }
+
+    /* ═══ Stat cards gradient borders ═══ */
+    .stat-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.03);
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(59,130,246,0.1), rgba(6,182,212,0.3));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card { transition: transform 0.3s ease; }
+
+    /* ═══ Task card ═══ */
+    .task-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .task-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(139, 92, 246, 0.2);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px rgba(139, 92, 246, 0.08);
+    }
+
+    /* ═══ Priority indicator ═══ */
+    .pri-bar { width: 3px; border-radius: 4px; flex-shrink: 0; align-self: stretch; }
+    .pri-haute   { background: linear-gradient(180deg, #ef4444, #dc2626); box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+    .pri-moyenne { background: linear-gradient(180deg, #f59e0b, #d97706); box-shadow: 0 0 8px rgba(245,158,11,0.3); }
+    .pri-basse   { background: linear-gradient(180deg, #22c55e, #16a34a); box-shadow: 0 0 8px rgba(34,197,94,0.3); }
+
+    /* ═══ Checkbox ═══ */
+    .check-btn {
+      width: 22px; height: 22px;
+      border: 2px solid rgba(148,163,184,0.3);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+    .check-btn:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.1); }
+    .check-btn.checked {
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      border-color: transparent;
+      box-shadow: 0 0 12px rgba(139,92,246,0.4);
+    }
+
+    /* ═══ Button ═══ */
+    .btn-glow {
+      background: linear-gradient(135deg, #7c3aed, #6366f1, #7c3aed);
+      background-size: 200% 100%;
+      transition: all 0.3s ease;
+    }
+    .btn-glow:hover {
+      animation: shimmer 2s infinite;
+      box-shadow: 0 4px 25px rgba(124, 58, 237, 0.5);
+      transform: translateY(-1px);
+    }
+
+    /* ═══ Action buttons ═══ */
+    .act-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.25s ease;
+      color: rgba(148,163,184,0.5);
+    }
+    .act-edit:hover   { color: #a78bfa; background: rgba(167,139,250,0.1); }
+    .act-delete:hover { color: #f87171; background: rgba(248,113,113,0.1); transform: scale(1.1); }
+
+    /* ═══ Scrollbar ═══ */
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.2); border-radius: 10px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.4); }
+
+    /* ═══ Modal ═══ */
+    .modal-overlay {
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .modal-card {
+      background: linear-gradient(135deg, rgba(15,15,40,0.98), rgba(20,10,50,0.98));
+      border: 1px solid rgba(139,92,246,0.2);
+    }
+
+    /* ═══ Filter buttons ═══ */
+    .fbtn-active {
+      background: rgba(139,92,246,0.15);
+      color: #c4b5fd;
+      border: 1px solid rgba(139,92,246,0.3);
+    }
+
+    /* ═══ Select styling ═══ */
+    select option { background: #1a1a3e; color: #e2e8f0; }
+  </style>
+</head>
+
+<body class="min-h-screen text-white bg-mesh overflow-x-hidden">
+
+  <!-- Floating orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="relative z-10 max-w-3xl mx-auto px-4 py-8 sm:py-14">
+
+    <!-- ═══ Header ═══ -->
+    <header class="mb-8 animate-fade-in-up">
+      <div class="flex items-center gap-4 mb-2">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
+             style="background: linear-gradient(135deg, #7c3aed, #2563eb); box-shadow: 0 0 30px rgba(124,58,237,0.3);">
+          <i class="fa-solid fa-list-check text-xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-3xl sm:text-4xl font-black tracking-tight"
+              style="background: linear-gradient(135deg, #fff, #c4b5fd, #93c5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Task Manager
+          </h1>
+          <p class="text-sm text-slate-500 font-medium">
+            <i class="fa-solid fa-bolt text-violet-400 mr-1 text-xs"></i>Organisez. Priorisez. Accomplissez.
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══ Stats ═══ -->
+    <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-7 animate-fade-in-up" style="animation-delay:.08s">
+      <div class="stat-card rounded-2xl p-4 text-center backdrop-blur-sm">
+        <p class="text-3xl font-black text-white mb-0.5" id="statTotal">0</p>
+        <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-widest">Total</p>
+      </div>
+      <div class="stat-card rounded-2xl p-4 text-center backdrop-blur-sm">
+        <p class="text-3xl font-black text-amber-400 mb-0.5" id="statActive">0</p>
+        <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-widest">En cours</p>
+      </div>
+      <div class="stat-card rounded-2xl p-4 text-center backdrop-blur-sm">
+        <p class="text-3xl font-black text-emerald-400 mb-0.5" id="statDone">0</p>
+        <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-widest">Terminées</p>
+      </div>
+    </div>
+
+    <!-- ═══ Main card ═══ -->
+    <div class="glass rounded-3xl p-5 sm:p-7 shadow-2xl animate-fade-in-up" style="animation-delay:.15s">
+
+      <!-- Form -->
+      <form id="taskForm" onsubmit="addTask(event)" class="mb-7">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="sm:col-span-2">
+            <label for="inputTitre" class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
+              <i class="fa-solid fa-pen-nib text-violet-400 mr-1"></i>Titre *
+            </label>
+            <input id="inputTitre" type="text" required placeholder="Que devez-vous faire ?"
+                   class="glass-input w-full px-4 py-3 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none transition-all duration-300" />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="inputDescription" class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
+              <i class="fa-solid fa-align-left text-blue-400 mr-1"></i>Description
+            </label>
+            <input id="inputDescription" type="text" placeholder="Détails optionnels..."
+                   class="glass-input w-full px-4 py-3 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none transition-all duration-300" />
+          </div>
+          <div>
+            <label for="inputPriorite" class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
+              <i class="fa-solid fa-flag text-amber-400 mr-1"></i>Priorité
+            </label>
+            <select id="inputPriorite"
+                    class="glass-input w-full px-4 py-3 rounded-xl text-white text-sm focus:outline-none transition-all duration-300 appearance-none cursor-pointer">
+              <option value="basse">🟢 Basse</option>
+              <option value="moyenne" selected>🟡 Moyenne</option>
+              <option value="haute">🔴 Haute</option>
+            </select>
+          </div>
+          <div>
+            <label for="inputEcheance" class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
+              <i class="fa-regular fa-calendar text-cyan-400 mr-1"></i>Échéance
+            </label>
+            <input id="inputEcheance" type="date"
+                   class="glass-input w-full px-4 py-3 rounded-xl text-white text-sm focus:outline-none transition-all duration-300" />
+          </div>
+        </div>
+        <button type="submit"
+                class="btn-glow w-full sm:w-auto px-7 py-3 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2.5 focus:outline-none">
+          <i class="fa-solid fa-plus"></i>
+          Ajouter la tâche
+        </button>
+      </form>
+
+      <!-- Divider -->
+      <div class="h-px mb-6" style="background: linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent);"></div>
+
+      <!-- Search + Filters -->
+      <div class="flex flex-col sm:flex-row gap-3 mb-5">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 text-xs"></i>
+          <input id="searchInput" type="text" placeholder="Rechercher..."
+                 oninput="renderTasks()"
+                 class="glass-input w-full pl-11 pr-4 py-2.5 rounded-xl text-white text-sm placeholder-slate-600 focus:outline-none transition-all duration-300" />
+        </div>
+        <div class="flex gap-1.5 flex-shrink-0">
+          <button onclick="setFilter('all')" id="f-all"
+                  class="fbtn fbtn-active px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200">Toutes</button>
+          <button onclick="setFilter('active')" id="f-active"
+                  class="fbtn px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-300 transition-all duration-200">Actives</button>
+          <button onclick="setFilter('done')" id="f-done"
+                  class="fbtn px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-300 transition-all duration-200">Terminées</button>
+        </div>
+      </div>
+
+      <!-- Task list -->
+      <div id="taskList" class="space-y-2.5 custom-scroll max-h-[480px] overflow-y-auto pr-1"></div>
+
+      <!-- Empty state -->
+      <div id="emptyState" class="hidden text-center py-16">
+        <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+             style="background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.1)); border: 1px solid rgba(139,92,246,0.1);">
+          <i class="fa-solid fa-rocket text-3xl text-violet-400/40"></i>
+        </div>
+        <p class="text-slate-500 text-sm font-semibold">Aucune tâche pour le moment</p>
+        <p class="text-slate-600 text-xs mt-1.5">Commencez par ajouter votre première tâche ✨</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center mt-8 text-slate-600 text-xs flex items-center justify-center gap-5 font-medium">
+      <span><i class="fa-brands fa-node-js text-green-500 mr-1.5"></i>Node.js</span>
+      <span class="text-slate-700">•</span>
+      <span><i class="fa-solid fa-database text-blue-400 mr-1.5"></i>PostgreSQL</span>
+      <span class="text-slate-700">•</span>
+      <span><i class="fa-brands fa-docker text-cyan-400 mr-1.5"></i>Docker</span>
+      <span class="text-slate-700">•</span>
+      <span><i class="fa-solid fa-dharmachakra text-violet-400 mr-1.5"></i>Kubernetes</span>
+    </footer>
+  </div>
+
+  <!-- ═══ Edit Modal ═══ -->
+  <div id="editModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay">
+    <div class="modal-card rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 animate-fade-in-up">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-bold text-white">
+          <i class="fa-solid fa-pen-to-square text-violet-400 mr-2"></i>Modifier la tâche
+        </h2>
+        <button onclick="closeEditModal()" class="act-btn act-edit text-slate-500 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <input type="hidden" id="editId" />
+      <div class="space-y-3">
+        <div>
+          <label for="editTitre" class="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Titre</label>
+          <input id="editTitre" type="text"
+                 class="glass-input w-full px-4 py-2.5 rounded-xl text-white text-sm focus:outline-none transition-all duration-300" />
+        </div>
+        <div>
+          <label for="editDescription" class="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Description</label>
+          <input id="editDescription" type="text"
+                 class="glass-input w-full px-4 py-2.5 rounded-xl text-white text-sm focus:outline-none transition-all duration-300" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="editPriorite" class="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Priorité</label>
+            <select id="editPriorite"
+                    class="glass-input w-full px-4 py-2.5 rounded-xl text-white text-sm focus:outline-none transition-all duration-300 appearance-none cursor-pointer">
+              <option value="basse">🟢 Basse</option>
+              <option value="moyenne">🟡 Moyenne</option>
+              <option value="haute">🔴 Haute</option>
+            </select>
+          </div>
+          <div>
+            <label for="editEcheance" class="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Échéance</label>
+            <input id="editEcheance" type="date"
+                   class="glass-input w-full px-4 py-2.5 rounded-xl text-white text-sm focus:outline-none transition-all duration-300" />
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeEditModal()"
+                class="flex-1 px-4 py-2.5 rounded-xl border border-slate-700 text-sm font-bold text-slate-400 hover:text-white hover:border-slate-500 transition-all">
+          Annuler
+        </button>
+        <button onclick="saveEdit()"
+                class="flex-1 btn-glow px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-all">
+          <i class="fa-solid fa-check mr-1.5"></i>Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ JavaScript ═══ -->
+  <script>
+    var API = '/api/taches';
+    var allTasks = [];
+    var currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', function() { fetchTasks(); });
+
+    async function fetchTasks() {
+      try {
+        var res = await fetch(API);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        allTasks = await res.json();
+        renderTasks();
+      } catch (err) { console.error('Erreur chargement:', err); }
+    }
+
+    async function addTask(e) {
+      e.preventDefault();
+      var titre        = document.getElementById('inputTitre').value.trim();
+      var description  = document.getElementById('inputDescription').value.trim();
+      var priorite     = document.getElementById('inputPriorite').value;
+      var dateEcheance = document.getElementById('inputEcheance').value;
+      if (titre.length === 0) return;
+
+      try {
+        var res = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ titre: titre, description: description, priorite: priorite, date_echeance: dateEcheance || null })
+        });
+        if (res.ok) {
+          document.getElementById('inputTitre').value = '';
+          document.getElementById('inputDescription').value = '';
+          document.getElementById('inputPriorite').value = 'moyenne';
+          document.getElementById('inputEcheance').value = '';
+          await fetchTasks();
+        }
+      } catch (err) { console.error('Erreur ajout:', err); }
+    }
+
+    async function toggleTask(id, currentState) {
+      try {
+        await fetch(API + '/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ terminee: !currentState })
+        });
+        await fetchTasks();
+      } catch (err) { console.error('Erreur toggle:', err); }
+    }
+
+    async function deleteTask(id) {
+      try {
+        await fetch(API + '/' + id, { method: 'DELETE' });
+        await fetchTasks();
+      } catch (err) { console.error('Erreur suppression:', err); }
+    }
+
+    function openEditModal(id) {
+      var task = null;
+      for (var i = 0; i < allTasks.length; i++) {
+        if (allTasks[i].id === id) { task = allTasks[i]; break; }
+      }
+      if (!task) return;
+      document.getElementById('editId').value = task.id;
+      document.getElementById('editTitre').value = task.titre || '';
+      document.getElementById('editDescription').value = task.description || '';
+      document.getElementById('editPriorite').value = task.priorite || 'moyenne';
+      document.getElementById('editEcheance').value = task.date_echeance ? task.date_echeance.substring(0, 10) : '';
+      var modal = document.getElementById('editModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('editTitre').focus();
+    }
+
+    function closeEditModal() {
+      var modal = document.getElementById('editModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function saveEdit() {
+      var id           = document.getElementById('editId').value;
+      var titre        = document.getElementById('editTitre').value.trim();
+      var description  = document.getElementById('editDescription').value.trim();
+      var priorite     = document.getElementById('editPriorite').value;
+      var dateEcheance = document.getElementById('editEcheance').value;
+      if (titre.length === 0) return;
+      try {
+        await fetch(API + '/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ titre: titre, description: description, priorite: priorite, date_echeance: dateEcheance || null })
+        });
+        closeEditModal();
+        await fetchTasks();
+      } catch (err) { console.error('Erreur édition:', err); }
+    }
+
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEditModal(); });
+
+    function setFilter(f) {
+      currentFilter = f;
+      var buttons = document.querySelectorAll('.fbtn');
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].className = 'fbtn px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-300 transition-all duration-200';
+      }
+      document.getElementById('f-' + f).className = 'fbtn fbtn-active px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200';
+      renderTasks();
+    }
+
+    function renderTasks() {
+      var list   = document.getElementById('taskList');
+      var empty  = document.getElementById('emptyState');
+      var search = document.getElementById('searchInput').value.toLowerCase();
+
+      var total = allTasks.length;
+      var done  = 0;
+      for (var i = 0; i < allTasks.length; i++) { if (allTasks[i].terminee) done++; }
+      var active = total - done;
+      document.getElementById('statTotal').textContent  = total;
+      document.getElementById('statActive').textContent = active;
+      document.getElementById('statDone').textContent   = done;
+
+      var tasks = [];
+      for (var i = 0; i < allTasks.length; i++) {
+        var t = allTasks[i];
+        if (currentFilter === 'active' && t.terminee) continue;
+        if (currentFilter === 'done' && !t.terminee) continue;
+        if (search && t.titre.toLowerCase().indexOf(search) === -1) continue;
+        tasks.push(t);
+      }
+
+      if (tasks.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      var html = '';
+      for (var i = 0; i < tasks.length; i++) {
+        var t = tasks[i];
+        var priClass = 'pri-moyenne';
+        if (t.priorite === 'haute') priClass = 'pri-haute';
+        if (t.priorite === 'basse') priClass = 'pri-basse';
+
+        var priLabel = '🟡 Moyenne';
+        var priBadge = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+        if (t.priorite === 'haute') { priLabel = '🔴 Haute'; priBadge = 'bg-red-500/10 text-red-400 border-red-500/20'; }
+        if (t.priorite === 'basse') { priLabel = '🟢 Basse'; priBadge = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'; }
+
+        var echeance = t.date_echeance ? formatDate(t.date_echeance) : '';
+        var now = new Date(); now.setHours(0,0,0,0);
+        var isLate = t.date_echeance && !t.terminee && new Date(t.date_echeance) < now;
+
+        var checkClass = t.terminee ? 'checked' : '';
+        var checkIcon  = t.terminee ? '<i class="fa-solid fa-check text-[10px] text-white"></i>' : '';
+        var titleStyle = t.terminee ? 'line-through text-slate-600' : 'text-slate-200';
+        var descStyle  = t.terminee ? 'text-slate-700' : 'text-slate-500';
+
+        html += '<div class="task-card rounded-xl p-4 flex items-start gap-3 animate-slide-in" style="animation-delay:' + (i * 0.04) + 's">';
+
+        // Priority bar
+        html += '<div class="pri-bar ' + priClass + '"></div>';
+
+        // Checkbox
+        html += '<button onclick="toggleTask(' + t.id + ',' + t.terminee + ')" class="check-btn ' + checkClass + '" title="' + (t.terminee ? 'Réactiver' : 'Terminer') + '">' + checkIcon + '</button>';
+
+        // Content
+        html += '<div class="flex-1 min-w-0">';
+        html += '<p class="text-sm font-semibold ' + titleStyle + '">' + esc(t.titre) + '</p>';
+        if (t.description) {
+          html += '<p class="text-xs ' + descStyle + ' mt-0.5 truncate">' + esc(t.description) + '</p>';
+        }
+        html += '<div class="flex flex-wrap items-center gap-2 mt-2">';
+        html += '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ' + priBadge + '">' + priLabel + '</span>';
+        if (echeance) {
+          var lateBadge = isLate ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/10';
+          html += '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ' + lateBadge + '">';
+          html += '<i class="fa-regular fa-calendar mr-1 text-[9px]"></i>' + echeance;
+          if (isLate) html += ' <i class="fa-solid fa-triangle-exclamation ml-1 text-[9px]"></i>';
+          html += '</span>';
+        }
+        html += '</div></div>';
+
+        // Actions
+        html += '<div class="flex items-center gap-0.5 flex-shrink-0">';
+        html += '<button onclick="openEditModal(' + t.id + ')" class="act-btn act-edit" title="Modifier"><i class="fa-solid fa-pen text-xs"></i></button>';
+        html += '<button onclick="deleteTask(' + t.id + ')" class="act-btn act-delete" title="Supprimer"><i class="fa-solid fa-trash-can text-xs"></i></button>';
+        html += '</div>';
+
+        html += '</div>';
+      }
+      list.innerHTML = html;
+    }
+
+    function formatDate(d) {
+      if (!d) return '';
+      var date = new Date(d);
+      return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function esc(text) {
+      if (!text) return '';
+      return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+  </script>
+</body>
+</html>

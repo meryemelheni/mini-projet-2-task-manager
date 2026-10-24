@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────
+# ConfigMap : variables non-sensibles
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: tp-app
+  labels:
+    app.kubernetes.io/part-of: task-manager
+data:
+  DB_NAME: "taskmanager"
+  DB_PORT: "5432"
+  DB_HOST: "db"
+  DB_USER: "taskuser"
+  API_PORT: "3000"
+
+---
+# ─────────────────────────────────────────────
+# Secret : mot de passe PostgreSQL
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: tp-app
+  labels:
+    app.kubernetes.io/part-of: task-manager
+type: Opaque
+data:
+  # "taskpassword" encodé en base64
+  DB_PASSWORD: dGFza3Bhc3N3b3Jk
+  POSTGRES_PASSWORD: dGFza3Bhc3N3b3Jk
+
+---
+# ─────────────────────────────────────────────
+# ConfigMap : configuration Nginx pour le frontend
+# (proxy_pass vers le Service K8s "api-svc")
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: tp-app
+  labels:
+    app.kubernetes.io/part-of: task-manager
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /api/ {
+            proxy_pass         http://api-svc:3000;
+            proxy_http_version 1.1;
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Real-IP $remote_addr;
+            proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+        }
+
+        location /health {
+            proxy_pass http://api-svc:3000;
+        }
+
+        location /ready {
+            proxy_pass http://api-svc:3000;
+        }
+    }

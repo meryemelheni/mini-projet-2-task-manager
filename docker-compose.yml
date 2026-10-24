@@ -1,0 +1,50 @@
+version: "3.3"
+
+services:
+  # ─── Base de données PostgreSQL ─────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: taskmanager-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskmanager
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d taskmanager"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── API Node.js / Express ─────────────────────────────────────────────────
+  api:
+    build: ./api
+    container_name: taskmanager-api
+    restart: unless-stopped
+    environment:
+      API_PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: taskmanager
+      DB_USER: taskuser
+      DB_PASSWORD: taskpassword
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+  # ─── Frontend Nginx ────────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: taskmanager-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

@@ -1,0 +1,9 @@
+# ─────────────────────────────────────────────
+# Namespace pour le Task Manager
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tp-app
+  labels:
+    app.kubernetes.io/part-of: task-manager
