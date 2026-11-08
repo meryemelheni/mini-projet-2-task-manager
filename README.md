@@ -43,8 +43,8 @@ Les données survivent à la suppression du Pod de la base. J'ai supprimé le po
   - Après : ![E6-Apres](captures/E6-Persistance-Apres.png)
 
 ### E7 — Démarrage de l'API
-L'API attend que la base soit prête grâce à une `readinessProbe` sur `/ready`.
-- **Preuve** : Voir la preuve E8 (les sondes sont visibles dans la description du pod).
+L'API attend que la base soit prête grâce à une `readinessProbe` sur `/ready` (et un init container).
+- **Preuve** : ![E7](captures/E7-API-attend-la-base.png)
 
 ### E8 — Ressources
 Chaque conteneur définit des `requests` et des `limits` (ex: API: 50m CPU / 64Mi RAM en request).
@@ -53,7 +53,7 @@ Chaque conteneur définit des `requests` et des `limits` (ex: API: 50m CPU / 64M
 
 ### E9 — Sondes (Probes)
 L'API a une `readinessProbe` sur `/ready` et une `livenessProbe` sur `/health`.
-- **Preuve** : Voir la capture E8.
+- **Preuve** : ![E9](captures/E9-Sondes-API.png)
 
 ### E10 — Exposition (Ingress)
 Seul le frontend est exposé par un Ingress sur `app.k3s.local`.
@@ -61,8 +61,8 @@ Seul le frontend est exposé par un Ingress sur `app.k3s.local`.
 - **Preuve** : ![E10](captures/E10-Ingress.png)
 
 ### E11 — Sauvegarde (CronJob)
-Un CronJob `db-backup` sauvegarde la base sur un volume dédié (`backup-pvc`) toutes les 5 minutes.
-- **Preuve** : *(Capture E11 à ajouter)*
+Un CronJob `db-backup` sauvegarde les données sur un volume dédié (`backup-pvc`) toutes les 5 minutes.
+- **Preuve** : ![E11](captures/E11-CronJob-Sauvegarde.png)
 
 ### E12 — RBAC
 Création d'un compte `dev-viewer` (ServiceAccount) avec un Role limité à la lecture dans le namespace.
